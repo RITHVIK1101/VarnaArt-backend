@@ -12,7 +12,17 @@ const port = process.env.PORT || 8080;
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'https://master--varnaart.netlify.app',
+    ];
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   optionsSuccessStatus: 200,
 };
 
