@@ -15,7 +15,7 @@ const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
       'http://localhost:3000',
-      'https://master--varnaart.netlify.app',
+      'https://66b7900cb4d6406321245fed--varnaart.netlify.app',
     ];
     if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
       callback(null, true);
