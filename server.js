@@ -5,6 +5,9 @@ const multer = require('multer');
 const path = require('path');
 const xlsx = require('xlsx');
 const fs = require('fs');
+
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
@@ -38,6 +41,8 @@ mongoose.connect(process.env.MONGO_URI, {
 })
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('Could not connect to MongoDB:', err));
+
+
 
 const productSchema = new mongoose.Schema({
   name: String,
@@ -165,6 +170,92 @@ app.post('/api/gallery/delete', async (req, res) => {
   }
 });
 
+const userSchema = new mongoose.Schema({
+  email: String,
+  password: String,
+  name: String
+});
+
+userSchema.pre('save', async function(next){
+  if(!this.isModified('password')) return next();
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+})
+
+const User = mongoose.model('User', userSchema);
+
+app.post('/signup', async (req, res) =>{
+  const{email, password, firstName, lastName} = req.body
+
+  try{
+    const existingUser = await User.findOne({email});
+    if(existingUser){
+      return res.status(400).json({message: 'Email in use'});
+    }
+
+    const newUser = new User({
+      email, 
+      password,
+      name: `${firstName} ${lastName}`
+    });
+    
+    await newUser.save();
+    res.status(201).json({message: 'User created Succesfully'});
+  } catch(error){
+    console.error('Error creating user:', error);
+  }
+});
+
+
+
+
+app.post('/login', async (req, res) =>{
+  
+    const{email, password} = req.body;
+    const user = await User.findOne({ email })
+
+    if (!user) {
+      return res.status(401);
+    }
+
+    // Compare the provided password with the hashed password in the database
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (isMatch) {
+      const token = jwt.sign(
+        { email: user.email },
+        'your_jwt_secret_key', // replace with your own secret key
+        { expiresIn: '1h' } // Token expires in 1 hour
+      );
+      res.status(200).json({ message: "Login successful", token});
+    } else {
+      res.res.status(401);
+    }
+
+  
+});
+
+const authenticateToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  
+  if (!token) {
+    console.log("no token")
+    return res.status(401);
+  }
+  jwt.verify(token, 'your_jwt_secret_key', (err, user) => {
+    if (err) {
+      console.log("invalid token")
+      return res.status(403);
+    }
+    req.user = user; // Store user info in the request
+    console.log("good")
+    next(); // Pass control to the next middleware function
+  });
+};
+
+app.get('/UserProtectedRoutes', authenticateToken, (req, res) => {
+  res.status(200).json({ user: req.user });
+});
 
 
 app.listen(port, () => {
