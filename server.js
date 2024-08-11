@@ -237,6 +237,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
+
 // Middleware to authenticate token
 const authenticateToken = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
@@ -253,7 +254,9 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
-
+app.get('/UserProtectedRoutes', authenticateToken, (req, res) => {
+  res.status(200).json({ user: req.userId, message: 'User is authenticated' });
+});
 // Cart API routes
 app.post('/api/cart/add', authenticateToken, async (req, res) => {
   const { productId } = req.body;
