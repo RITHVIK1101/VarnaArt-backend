@@ -3,8 +3,10 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const jwt = require('jsonwebtoken');
+const xlsx = require('xlsx');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
@@ -38,11 +40,28 @@ mongoose.connect(process.env.MONGO_URI, {
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Could not connect to MongoDB:', err));
 
-// User schema and model
+const productSchema = new mongoose.Schema({
+  name: String,
+  price: String,
+  description: String,
+  imageUrl: String,
+});
+
+const galleryItemSchema = new mongoose.Schema({
+  description: String,
+  imageUrl: String,
+});
+
 const userSchema = new mongoose.Schema({
-  email: { type: String, unique: true },
+  email: String,
   password: String,
-  name: String
+  name: String,
+});
+
+const cartProductSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+  quantity: { type: Number, default: 1 },
 });
 
 userSchema.pre('save', async function (next) {
@@ -52,54 +71,12 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-const User = mongoose.model('User', userSchema);
-
-// Middleware to authenticate token
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access denied. No token provided.' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: 'Invalid token.' });
-    }
-    req.userId = user.id;
-    next();
-  });
-};
-
-// Product schema and model
-const productSchema = new mongoose.Schema({
-  name: String,
-  price: String,
-  description: String,
-  imageUrl: String,
-});
-
 const Product = mongoose.model('Product', productSchema);
-
-// Gallery item schema and model
-const galleryItemSchema = new mongoose.Schema({
-  description: String,
-  imageUrl: String,
-});
-
 const GalleryItem = mongoose.model('GalleryItem', galleryItemSchema);
-
-// Cart product schema and model
-const cartProductSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Reference to the user
-  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' }, // Reference to the product
-  quantity: { type: Number, default: 1 },
-});
-
+const User = mongoose.model('User', userSchema);
 const CartProduct = mongoose.model('CartProduct', cartProductSchema);
 
-// Multer setup for image upload
+// Setup multer for image upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
@@ -126,83 +103,6 @@ const writeToExcel = async () => {
 };
 
 // POST Routes
-app.post('/signup', async (req, res) => {
-  const { email, password, firstName, lastName } = req.body;
-
-  try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email in use' });
-    }
-
-    const newUser = new User({
-      email,
-      password,
-      name: `${firstName} ${lastName}`
-    });
-
-    await newUser.save();
-    res.status(201).json({ message: 'User created successfully' });
-  } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ message: 'Error creating user' });
-  }
-});
-
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.status(200).json({ token, message: 'Login successful' });
-  } catch (error) {
-    console.error('Error during login:', error);
-    res.status(500).json({ message: 'Error during login' });
-  }
-});
-
-app.post('/api/cart/add', authenticateToken, async (req, res) => {
-  const { productId } = req.body;
-  const userId = req.userId; // Assuming you get this from the authentication middleware
-
-  try {
-    let cartProduct = await CartProduct.findOne({ userId, productId });
-    if (cartProduct) {
-      // If the product is already in the cart, increase the quantity
-      cartProduct.quantity += 1;
-    } else {
-      // Otherwise, create a new entry in the cart
-      cartProduct = new CartProduct({ userId, productId });
-    }
-    await cartProduct.save();
-    res.status(201).send(cartProduct);
-  } catch (error) {
-    res.status(400).send(error);
-  }
-});
-
-
-app.get('/api/cart', authenticateToken, async (req, res) => {
-  const userId = req.userId;
-
-  try {
-    const cartProducts = await CartProduct.find({ userId }).populate('productId');
-    res.status(200).send(cartProducts);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-
 app.post('/api/products', upload.single('image'), async (req, res) => {
   const { name, price, description } = req.body;
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
@@ -284,6 +184,115 @@ app.post('/api/gallery/delete', async (req, res) => {
     res.status(200).send('Gallery items deleted successfully.');
   } catch (error) {
     res.status(500).send('Error deleting gallery items.');
+  }
+});
+
+// User Authentication
+app.post('/signup', async (req, res) => {
+  const { email, password, firstName, lastName } = req.body;
+
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email in use' });
+    }
+
+    const newUser = new User({
+      email,
+      password,
+      name: `${firstName} ${lastName}`,
+    });
+
+    await newUser.save();
+    res.status(201).json({ message: 'User created successfully' });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (isMatch) {
+      const token = jwt.sign(
+        { userId: user._id, email: user.email },
+        process.env.JWT_SECRET || 'your_jwt_secret_key',
+        { expiresIn: '1h' }
+      );
+      res.status(200).json({ message: 'Login successful', token });
+    } else {
+      res.status(401).json({ message: 'Invalid credentials' });
+    }
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Middleware to authenticate token
+const authenticateToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied, token missing' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key', (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'Invalid token' });
+    }
+    req.userId = user.userId; // Store userId in request
+    next();
+  });
+};
+
+// Cart API routes
+app.post('/api/cart/add', authenticateToken, async (req, res) => {
+  const { productId } = req.body;
+  const userId = req.userId;
+
+  try {
+    let cartProduct = await CartProduct.findOne({ userId, productId });
+    if (cartProduct) {
+      cartProduct.quantity += 1;
+    } else {
+      cartProduct = new CartProduct({ userId, productId });
+    }
+    await cartProduct.save();
+    res.status(201).send(cartProduct);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+});
+
+app.get('/api/cart', authenticateToken, async (req, res) => {
+  const userId = req.userId;
+
+  try {
+    const cartProducts = await CartProduct.find({ userId }).populate('productId');
+    res.status(200).send(cartProducts);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
+app.post('/api/cart/remove', authenticateToken, async (req, res) => {
+  const { productId } = req.body;
+  const userId = req.userId;
+
+  try {
+    await CartProduct.deleteOne({ userId, productId });
+    res.status(200).send({ message: 'Product removed from cart' });
+  } catch (error) {
+    res.status(500).send(error);
   }
 });
 
