@@ -298,6 +298,39 @@ app.post('/api/cart/remove', authenticateToken, async (req, res) => {
     res.status(500).send(error);
   }
 });
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+// Create a Checkout Session
+app.post('/api/create-checkout-session', authenticateToken, async (req, res) => {
+  const { cartItems } = req.body;
+
+  const lineItems = cartItems.map(item => ({
+    price_data: {
+      currency: 'usd',
+      product_data: {
+        name: item.productId.name,
+        images: [item.productId.imageUrl],
+      },
+      unit_amount: item.productId.price * 100,
+    },
+    quantity: item.quantity,
+  }));
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL}/success`,
+      cancel_url: `${process.env.FRONTEND_URL}/cart`,
+    });
+
+    res.json({ sessionId: session.id });
+  } catch (error) {
+    console.error('Error creating Stripe checkout session:', error);
+    res.status(500).send('Server error');
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
