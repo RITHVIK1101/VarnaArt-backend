@@ -309,7 +309,7 @@ app.post('/api/create-checkout-session', authenticateToken, async (req, res) => 
       currency: 'usd',
       product_data: {
         name: item.productId.name,
-        images: [item.productId.imageUrl],
+        images: [`${process.env.FRONTEND_URL}${item.productId.imageUrl}`], // Ensure full URL for images
       },
       unit_amount: item.productId.price * 100,
     },
