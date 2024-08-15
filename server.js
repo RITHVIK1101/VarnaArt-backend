@@ -7,6 +7,7 @@ const xlsx = require('xlsx');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
@@ -37,9 +38,13 @@ app.use(
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
       "font-src": ["'self'", "https://js.stripe.com", "data:"],
+      "script-src": ["'self'", "https://js.stripe.com"], // Allowing scripts from Stripe
+      "frame-src": ["'self'", "https://js.stripe.com"], // Allowing iframes from Stripe
+      "connect-src": ["'self'", "https://api.stripe.com"], // Allowing connections to Stripe API
     },
   })
 );
+
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
