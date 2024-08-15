@@ -36,11 +36,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(
   helmet.contentSecurityPolicy({
     directives: {
-      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "font-src": ["'self'", "https://js.stripe.com", "data:"],
-      "script-src": ["'self'", "https://js.stripe.com"], // Allowing scripts from Stripe
-      "frame-src": ["'self'", "https://js.stripe.com"], // Allowing iframes from Stripe
-      "connect-src": ["'self'", "https://api.stripe.com"], // Allowing connections to Stripe API
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://js.stripe.com"],
+      styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://js.stripe.com", "data:"],
+      connectSrc: ["'self'", "https://api.stripe.com"],
+      frameSrc: ["'self'", "https://js.stripe.com"],
+      imgSrc: ["'self'", "data:"], // Allows images from your server and inline images
+      // Note: If you're using a CDN for FontAwesome CSS, you would add it here
     },
   })
 );
