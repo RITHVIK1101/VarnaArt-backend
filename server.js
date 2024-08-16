@@ -33,18 +33,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "font-src": ["'self'", "https://js.stripe.com", "data:", "*"],
-      "script-src": ["'self'", "https://js.stripe.com", "'unsafe-inline'", "'unsafe-eval'"],
-      "style-src": ["'self'", "https:", "'unsafe-inline'"],
-      "img-src": ["'self'", "data:", "https:"],
-      "connect-src": ["'self'", "https://api.stripe.com"],
-    },
-  })
-);
+
+
 
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
