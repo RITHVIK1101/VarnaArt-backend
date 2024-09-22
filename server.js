@@ -43,12 +43,15 @@ mongoose.connect(process.env.MONGO_URI, {
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Could not connect to MongoDB:', err));
 
-const productSchema = new mongoose.Schema({
-  name: String,
-  price: String,
-  description: String,
-  imageUrl: String,
-});
+  const productSchema = new mongoose.Schema({
+    name: String,
+    price: String,
+    description: String,
+    imageUrl: String,
+    length: Number, 
+    width: Number,  
+    unit: String,   
+  });
 
 const galleryItemSchema = new mongoose.Schema({
   description: String,
@@ -107,10 +110,19 @@ const writeToExcel = async () => {
 
 // POST Routes
 app.post('/api/products', upload.single('image'), async (req, res) => {
-  const { name, price, description } = req.body;
+  const { name, price, description, length, width, unit } = req.body; // Destructure dimensions
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
 
-  const newProduct = new Product({ name, price, description, imageUrl });
+  const newProduct = new Product({
+    name,
+    price,
+    description,
+    imageUrl,
+    length,  // Add length
+    width,   
+    unit,    
+  });
+
   try {
     await newProduct.save();
     await writeToExcel(); // Update Excel file
