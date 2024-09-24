@@ -51,6 +51,7 @@ mongoose.connect(process.env.MONGO_URI, {
     length: Number, 
     width: Number,  
     unit: String,   
+    type: String,   
   });
 
 const galleryItemSchema = new mongoose.Schema({
@@ -110,7 +111,7 @@ const writeToExcel = async () => {
 
 // POST Routes
 app.post('/api/products', upload.single('image'), async (req, res) => {
-  const { name, price, description, length, width, unit } = req.body; // Destructure dimensions
+  const { name, price, description, length, width, unit, type } = req.body; // Add type
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
 
   const newProduct = new Product({
@@ -118,14 +119,14 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
     price,
     description,
     imageUrl,
-    length,  // Add length
-    width,   
-    unit,    
+    length,
+    width,
+    unit,
+    type,  // Save type in the product
   });
 
   try {
     await newProduct.save();
-    await writeToExcel(); // Update Excel file
     res.status(201).send(newProduct);
   } catch (error) {
     res.status(400).send(error);
