@@ -71,13 +71,10 @@ const cartProductSchema = new mongoose.Schema({
   quantity: { type: Number, default: 1 },
 });
 const inventorySchema = new mongoose.Schema({
-  item: String,
-  quantity: Number,
-  price: Number,
+  fields: Object // Flexible schema that allows any key-value pairs
 });
 
 const Inventory = mongoose.model('Inventory', inventorySchema);
-
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(10);
@@ -367,11 +364,7 @@ app.get('/api/inventory', async (req, res) => {
 app.post('/api/inventory', async (req, res) => {
   try {
     const { inventory } = req.body;
-
-    if (!inventory || !Array.isArray(inventory)) {
-      return res.status(400).send('Invalid inventory data');
-    }
-
+    // Save the inventory data as flexible objects
     await Inventory.deleteMany(); // Optional: Clears previous inventory data
     await Inventory.insertMany(inventory); // Save new inventory data
 
