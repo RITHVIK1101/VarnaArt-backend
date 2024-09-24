@@ -317,6 +317,7 @@ app.post('/api/cart/remove', authenticateToken, async (req, res) => {
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Create a Checkout Session
+// Create a Checkout Session
 app.post('/api/create-checkout-session', authenticateToken, async (req, res) => {
   const { cartItems } = req.body;
 
@@ -337,8 +338,8 @@ app.post('/api/create-checkout-session', authenticateToken, async (req, res) => 
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL}/success`,
-      cancel_url: `${process.env.FRONTEND_URL}/cart`,
+      success_url: `${process.env.FRONTEND_URL}/success`, // Redirect after successful payment
+      cancel_url: `${process.env.FRONTEND_URL}/cart`,     // Redirect on payment cancel
     });
 
     res.json({ sessionId: session.id });
