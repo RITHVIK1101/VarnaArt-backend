@@ -70,6 +70,13 @@ const cartProductSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
   quantity: { type: Number, default: 1 },
 });
+const inventorySchema = new mongoose.Schema({
+  item: String,
+  quantity: Number,
+  price: Number,
+});
+
+const Inventory = mongoose.model('Inventory', inventorySchema);
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
@@ -348,7 +355,32 @@ app.post('/api/create-checkout-session', authenticateToken, async (req, res) => 
     res.status(500).send('Server error');
   }
 });
+app.get('/api/inventory', async (req, res) => {
+  try {
+    const inventory = await Inventory.find(); // Fetch inventory from the database
+    res.status(200).send(inventory);
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    res.status(500).send('Error fetching inventory');
+  }
+});
+app.post('/api/inventory', async (req, res) => {
+  try {
+    const { inventory } = req.body;
 
+    if (!inventory || !Array.isArray(inventory)) {
+      return res.status(400).send('Invalid inventory data');
+    }
+
+    await Inventory.deleteMany(); // Optional: Clears previous inventory data
+    await Inventory.insertMany(inventory); // Save new inventory data
+
+    res.status(200).send('Inventory updated successfully');
+  } catch (error) {
+    console.error('Error saving inventory:', error);
+    res.status(500).send('Error saving inventory');
+  }
+});
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
 });
