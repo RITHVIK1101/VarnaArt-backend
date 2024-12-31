@@ -191,7 +191,7 @@ app.post('/api/gallery/delete', async (req, res) => {
 });
 
 // Cart API routes
-app.post('/api/cart/add', authenticateToken, async (req, res) => {
+app.post('/api/cart/add', async (req, res) => {
   const { productId } = req.body;
   const userId = req.userId;
 
@@ -209,7 +209,7 @@ app.post('/api/cart/add', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/cart', authenticateToken, async (req, res) => {
+app.get('/api/cart', async (req, res) => {
   const userId = req.userId;
 
   try {
@@ -220,7 +220,7 @@ app.get('/api/cart', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/cart/remove', authenticateToken, async (req, res) => {
+app.post('/api/cart/remove', async (req, res) => {
   const { productId } = req.body;
   const userId = req.userId;
 
@@ -234,7 +234,7 @@ app.post('/api/cart/remove', authenticateToken, async (req, res) => {
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Create a Checkout Session
-app.post('/api/create-checkout-session', authenticateToken, async (req, res) => {
+app.post('/api/create-checkout-session', async (req, res) => {
   const { cartItems } = req.body;
 
   const lineItems = cartItems.map(item => ({
