@@ -43,12 +43,16 @@ mongoose.connect(process.env.MONGO_URI, {
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Could not connect to MongoDB:', err));
 
-const productSchema = new mongoose.Schema({
-  name: String,
-  price: String,
-  description: String,
-  imageUrl: String,
-});
+  const productSchema = new mongoose.Schema({
+    name: String,
+    price: String,
+    description: String,
+    imageUrl: String,
+    length: Number, 
+    width: Number,  
+    unit: String,   
+    type: String,   
+  });
 
 const galleryItemSchema = new mongoose.Schema({
   description: String,
@@ -66,7 +70,11 @@ const cartProductSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
   quantity: { type: Number, default: 1 },
 });
+const inventorySchema = new mongoose.Schema({
+  fields: Object // Flexible schema that allows any key-value pairs
+});
 
+const Inventory = mongoose.model('Inventory', inventorySchema);
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(10);
@@ -107,13 +115,22 @@ const writeToExcel = async () => {
 
 // POST Routes
 app.post('/api/products', upload.single('image'), async (req, res) => {
-  const { name, price, description } = req.body;
+  const { name, price, description, length, width, unit, type } = req.body; // Add type
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
 
-  const newProduct = new Product({ name, price, description, imageUrl });
+  const newProduct = new Product({
+    name,
+    price,
+    description,
+    imageUrl,
+    length,
+    width,
+    unit,
+    type,  // Save type in the product
+  });
+
   try {
     await newProduct.save();
-    await writeToExcel(); // Update Excel file
     res.status(201).send(newProduct);
   } catch (error) {
     res.status(400).send(error);
@@ -254,8 +271,8 @@ app.post('/api/create-checkout-session', async (req, res) => {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL}/success`,
-      cancel_url: `${process.env.FRONTEND_URL}/cart`,
+      success_url: `${process.env.FRONTEND_URL}/success`, // Redirect after successful payment
+      cancel_url: `${process.env.FRONTEND_URL}/cart`,     // Redirect on payment cancel
     });
 
     res.json({ sessionId: session.id });
@@ -264,7 +281,28 @@ app.post('/api/create-checkout-session', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+app.get('/api/inventory', async (req, res) => {
+  try {
+    const inventory = await Inventory.find(); // Fetch inventory from the database
+    res.status(200).send(inventory);
+  } catch (error) {
+    console.error('Error fetching inventory:', error);
+    res.status(500).send('Error fetching inventory');
+  }
+});
+app.post('/api/inventory', async (req, res) => {
+  try {
+    const { inventory } = req.body;
+    // Save the inventory data as flexible objects
+    await Inventory.deleteMany(); // Optional: Clears previous inventory data
+    await Inventory.insertMany(inventory); // Save new inventory data
 
+    res.status(200).send('Inventory updated successfully');
+  } catch (error) {
+    console.error('Error saving inventory:', error);
+    res.status(500).send('Error saving inventory');
+  }
+});
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
 });
