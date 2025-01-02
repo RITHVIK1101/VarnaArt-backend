@@ -313,11 +313,7 @@ app.post('/api/gallery/delete', async (req, res) => {
 // Add Product to Cart
 app.post('/api/cart/add', async (req, res) => {
   const { productId } = req.body;
-  const userId = req.userId; // Ensure userId is set via authentication middleware
-
-  if (!userId) {
-    return res.status(401).json({ error: 'Unauthorized: User not authenticated.' });
-  }
+  const userId = req.userId;
 
   try {
     let cartProduct = await CartProduct.findOne({ userId, productId });
@@ -327,10 +323,29 @@ app.post('/api/cart/add', async (req, res) => {
       cartProduct = new CartProduct({ userId, productId });
     }
     await cartProduct.save();
-    res.status(201).json(cartProduct);
+    res.status(201).send(cartProduct);
   } catch (error) {
-    res.status(400).json({ error: 'Error adding product to cart.' });
+    res.status(400).send(error);
   }
+  // const { productId } = req.body;
+  // const userId = req.userId; // Ensure userId is set via authentication middleware
+
+  // if (!userId) {
+  //   return res.status(401).json({ error: 'Unauthorized: User not authenticated.' });
+  // }
+
+  // try {
+  //   let cartProduct = await CartProduct.findOne({ userId, productId });
+  //   if (cartProduct) {
+  //     cartProduct.quantity += 1;
+  //   } else {
+  //     cartProduct = new CartProduct({ userId, productId });
+  //   }
+  //   await cartProduct.save();
+  //   res.status(201).json(cartProduct);
+  // } catch (error) {
+  //   res.status(400).json({ error: 'Error adding product to cart.' });
+  // }
 });
 
 // Get User's Cart
