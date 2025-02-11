@@ -7,6 +7,6 @@ const router = express.Router();
 router.post('/', addGalleryItem); // Add a new gallery item
 router.get('/', getAllGalleryItems); // Get all gallery items
 router.get('/:id', getGalleryItemById); // Get a gallery item by ID
-router.post('/delete', deleteGalleryItems); // Delete multiple gallery items
+router.post('/delete', deleteGalleryItems); 
 
 module.exports = router;
