@@ -7,9 +7,10 @@ const productSchema = new mongoose.Schema({
     trim: true,
   },
   price: {
-    type: String, // Consider changing to Number for numeric operations
+    type: Number, // ✅ Change this to Number
     required: true,
   },
+  
   description: {
     type: String,
     required: true,

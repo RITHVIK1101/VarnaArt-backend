@@ -1,43 +1,33 @@
 const Gallery = require('../models/GalleryItem');
 
-// Add a new gallery item
 exports.addGalleryItem = async (req, res) => {
-    const { description, imageUrls, type, tags } = req.body;
-  
-    // Validate required fields
-    if (
-      !description ||
-      !imageUrls ||
-      !Array.isArray(imageUrls) ||
-      imageUrls.length === 0 ||
-      !type ||
-      !tags ||
-      !Array.isArray(tags) ||
-      tags.length === 0
-    ) {
-      return res.status(400).json({ error: 'Description, type, tags, and at least one image URL are required.' });
-    }
-  
-    try {
-      // Create a new gallery item
-      const newGalleryItem = new Gallery({
-        description,
-        imageUrls,
-        type,
-        tags,
-      });
-  
-      await newGalleryItem.save();
-  
-      res.status(201).json({
-        message: 'Gallery item added successfully.',
-        galleryItem: newGalleryItem,
-      });
-    } catch (error) {
-      console.error('Error adding gallery item:', error);
-      res.status(500).json({ error: 'Internal server error.' });
-    }
-  };
+  const { description, imageUrls, type, tags } = req.body;
+
+  // ✅ Ensure all fields are present
+  if (!description || !imageUrls || !type || !tags || imageUrls.length === 0 || tags.length === 0) {
+    return res.status(400).json({ error: 'Description, type, tags, and at least one image URL are required.' });
+  }
+
+  try {
+    const newGalleryItem = new Gallery({
+      description,
+      imageUrls,
+      type,
+      tags,
+    });
+
+    await newGalleryItem.save();
+
+    res.status(201).json({
+      message: 'Gallery item added successfully.',
+      galleryItem: newGalleryItem,
+    });
+  } catch (error) {
+    console.error('Error adding gallery item:', error);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
   
 // Get all gallery items
 exports.getAllGalleryItems = async (req, res) => {
